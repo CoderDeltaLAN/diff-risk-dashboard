@@ -1,0 +1,5 @@
+[
+  {"file":"app.py","predicted_risk":"high","reason":"Sensitive API call in diff"},
+  {"file":"utils.py","predicted_risk":"medium","reason":"Input validation weakened"},
+  {"file":"README.md","predicted_risk":"low","reason":"Docs-only change"}
+]

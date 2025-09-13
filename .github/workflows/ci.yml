@@ -1,0 +1,23 @@
+name: CI / build
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11","3.12"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install -U pip
+      - run: pip install poetry
+      - run: poetry install --no-interaction
+      - run: poetry run ruff check .
+      - run: poetry run black --check .
+      - run: PYTHONPATH=src poetry run pytest -q
+      - run: poetry run mypy src
