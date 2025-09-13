@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Literal, TypedDict, cast
+from typing import Any, Literal, TypedDict
 
 Severity = Literal["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
 
@@ -17,7 +17,7 @@ class Finding(TypedDict, total=False):
 
 class Summary(TypedDict):
     total: int
-    by_severity: dict[str, int]  # keys: "critical","high","medium","low","info"
+    by_severity: dict[str, int]  # incluye claves en minúsculas y MAYÚSCULAS
     worst: Severity
     risk_level: Literal["red", "yellow", "green"]
 
@@ -36,7 +36,7 @@ def _norm_sev(s: str | None) -> Severity:
         return "INFO"
     s = s.strip().upper()
     if s in _SEV_ORDER:
-        return cast(Severity, s)
+        return s  # type: ignore[return-value]
     if s in {"CRIT"}:
         return "CRITICAL"
     if s in {"MED", "MODERATE"}:
@@ -48,7 +48,7 @@ def _norm_sev(s: str | None) -> Severity:
 
 def _extract_raw_sev(f: Finding) -> str | None:
     # Soporta tanto "severity" como "predicted_risk" (ai-patch-verifier)
-    return cast(str | None, f.get("severity") or f.get("predicted_risk"))
+    return f.get("severity") or f.get("predicted_risk")
 
 
 def _iter_findings(obj: Any) -> Iterable[Finding]:
@@ -57,12 +57,12 @@ def _iter_findings(obj: Any) -> Iterable[Finding]:
         if isinstance(cand, list):
             for x in cand:
                 if isinstance(x, dict):
-                    yield cast(Finding, x)
+                    yield x  # type: ignore[generator-item-type]
         return
     if isinstance(obj, list):
         for x in obj:
             if isinstance(x, dict):
-                yield cast(Finding, x)
+                yield x  # type: ignore[generator-item-type]
 
 
 def summarize(obj: Any) -> Summary:
@@ -83,24 +83,31 @@ def summarize(obj: Any) -> Summary:
     elif counts_uc["LOW"] > 0:
         worst = "LOW"
 
-    risk: Literal["red", "yellow", "green"]
     if worst in {"CRITICAL", "HIGH"}:
-        risk = "red"
+        risk: Literal["red", "yellow", "green"] = "red"
     elif worst == "MEDIUM":
         risk = "yellow"
     else:
         risk = "green"
 
-    # Salida en minúsculas para compatibilidad con tests
-    by_sev_lc = {
+    # Salida: claves minúsculas y MAYÚSCULAS para compatibilidad con tests y clientes
+    by_lc = {
         "critical": counts_uc["CRITICAL"],
         "high": counts_uc["HIGH"],
         "medium": counts_uc["MEDIUM"],
         "low": counts_uc["LOW"],
         "info": counts_uc["INFO"],
     }
+    by_uc = {
+        "CRITICAL": counts_uc["CRITICAL"],
+        "HIGH": counts_uc["HIGH"],
+        "MEDIUM": counts_uc["MEDIUM"],
+        "LOW": counts_uc["LOW"],
+        "INFO": counts_uc["INFO"],
+    }
+    by_sev: dict[str, int] = {**by_lc, **by_uc}
 
-    return {"total": total, "by_severity": by_sev_lc, "worst": worst, "risk_level": risk}
+    return {"total": total, "by_severity": by_sev, "worst": worst, "risk_level": risk}
 
 
 def summarize_apv_json(text_or_path: str | bytes) -> Summary:
