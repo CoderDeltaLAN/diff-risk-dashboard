@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from typing import Dict, List
 
-SEVERITIES: List[str] = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+SEVERITIES: list[str] = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
 
 
 @dataclass
 class Summary:
     total: int
-    by_severity: Dict[str, int]
+    by_severity: dict[str, int]
     worst: str
     risk_level: str  # "red" | "yellow" | "green"
 
@@ -22,7 +21,7 @@ def to_markdown(s: Summary) -> str:
         )
 
     dot = "🔴" if s.risk_level == "red" else "🟡" if s.risk_level == "yellow" else "🟢"
-    lines = [
+    lines: list[str] = [
         f"# Diff Risk Dashboard {dot} — Worst: **{s.worst}**",
         "",
         "| Severity | Count |",
