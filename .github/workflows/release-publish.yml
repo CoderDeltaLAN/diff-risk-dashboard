@@ -1,0 +1,21 @@
+name: Release (publish)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * 1' # Lunes 09:00 UTC
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  publish:
+    if: ${{ github.repository == 'CoderDeltaLAN/diff-risk-dashboard' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: release-drafter/release-drafter@v6
+        with:
+          publish: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

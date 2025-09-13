@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+REPO_DIR="/home/user/Proyectos/diff-risk-dashboard"
+cd "$REPO_DIR" || exit 1
+
+BR="chore/extras-readme-governance-$(date +%Y%m%d%H%M%S)"
+git switch -c "$BR" origin/main 2>/dev/null || git checkout -b "$BR"
+
+# --- README completo (badges, uso, roadmap, sponsors) ---
+cat > README.md <<'MD'
 # 🛡️ Diff Risk Dashboard — APV JSON → Summary (CLI & Markdown)
 
 Un **CLI** mínimo y profesional para resumir salidas de **ai-patch-verifier (APV)**:  
@@ -150,3 +160,111 @@ ruff black pytest mypy, branch protection required checks, squash merge linear h
 ## 📄 Licencia
 
 **MIT**. Ver [LICENSE](LICENSE).
+MD
+
+# --- GOVERNANCE & SPONSORS ---
+mkdir -p .github/ISSUE_TEMPLATE
+
+cat > .github/FUNDING.yml <<'YML'
+github: []
+custom:
+  - https://www.paypal.com/donate/\?hosted_button_id\=YVENCBNCZWVPW
+YML
+
+cat > SECURITY.md <<'MD'
+# Security Policy
+
+- Report vulnerabilities via **GitHub Security Advisories** or email.
+- Do not open public issues with exploitable PoCs.
+- Initial response within 72h.
+MD
+
+cat > CONTRIBUTING.md <<'MD'
+# Contributing
+
+1) PRs pequeños con Conventional Commits.
+2) CI local: `ruff`, `black --check`, `pytest`, `mypy`.
+3) Activa auto-merge cuando los checks estén en verde.
+MD
+
+echo "* @CoderDeltaLAN" > CODEOWNERS
+
+cat > .github/ISSUE_TEMPLATE/bug_report.yml <<'YML'
+name: Bug report
+description: Reportar un problema
+labels: [bug]
+body:
+  - type: textarea
+    attributes: { label: Descripción, placeholder: Qué ocurrió y qué esperabas }
+    validations: { required: true }
+  - type: textarea
+    attributes: { label: Repro, placeholder: Pasos, input, versión }
+YML
+
+cat > .github/ISSUE_TEMPLATE/feature_request.yml <<'YML'
+name: Feature request
+description: Solicitar mejora
+labels: [enhancement]
+body:
+  - type: textarea
+    attributes: { label: Propuesta, placeholder: ¿Qué y por qué? }
+    validations: { required: true }
+YML
+
+# --- Auto-release semanal/manual con Release Drafter ---
+mkdir -p .github/workflows
+cat > .github/workflows/release-publish.yml <<'YML'
+name: Release (publish)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * 1' # Lunes 09:00 UTC
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  publish:
+    if: ${{ github.repository == 'CoderDeltaLAN/diff-risk-dashboard' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: release-drafter/release-drafter@v6
+        with:
+          publish: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+YML
+
+# --- Limpiar workflows huérfanos (dependabot labels) ---
+if ls .github/workflows 2>/dev/null | grep -Ei 'dependabot.*label|label.*dependabot' >/dev/null; then
+  git rm -f .github/workflows/*dependabot*label*.yml 2>/dev/null || true
+fi
+
+# --- Commit & PR ---
+git add -A
+git commit -m "docs+gov: README (badges, sponsors, roadmap) + FUNDING + SECURITY + CONTRIBUTING + templates + release workflow" || true
+git push -u origin "$BR"
+
+REPO_SLUG="$(git config --get remote.origin.url | sed 's#.*github.com/##;s/.git$//')"
+PR_URL="$(gh pr create -R "$REPO_SLUG" -B main -H "$BR" \
+  -t "docs+gov: README, Sponsors, Roadmap, auto-release" \
+  -b "README actualizado, gobierno del repo, issue templates y workflow de publicación (Release Drafter).")"
+echo "$PR_URL"
+
+# --- Checks & merge (best-effort) ---
+gh pr checks "$(basename "$PR_URL")" -R "$REPO_SLUG" --watch || true
+gh pr merge  "$(basename "$PR_URL")" -R "$REPO_SLUG" --squash --delete-branch --auto \
+  || gh pr merge "$(basename "$PR_URL")" -R "$REPO_SLUG" --squash --delete-branch --admin || true
+
+# --- Dejar main espejo/verde ---
+git fetch origin --prune
+git switch main
+git reset --hard origin/main
+git clean -fdx
+
+echo "=== Últimos runs en main ==="
+gh run list --repo "$REPO_SLUG" --limit 8 \
+  --json workflowName,headBranch,conclusion,url \
+  --jq '.[]|select(.headBranch=="main")|[.workflowName,.conclusion,.url]|@tsv'

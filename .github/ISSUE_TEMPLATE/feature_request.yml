@@ -1,0 +1,7 @@
+name: Feature request
+description: Solicitar mejora
+labels: [enhancement]
+body:
+  - type: textarea
+    attributes: { label: Propuesta, placeholder: ¿Qué y por qué? }
+    validations: { required: true }
