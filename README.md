@@ -37,28 +37,38 @@ Designed for **always-green CI**, with strict checks and exit codes per risk lev
 
 <!-- diff-risk:usage:start -->
 
-### CLI usage
+## 🚀 Usage
+
+### CLI
 
 ```bash
-# Mostrar ayuda
+# Help
 poetry run diff-risk -h
 
-# Ejemplos de salida
+# Pretty table (auto color & proportional bars)
 poetry run diff-risk examples/sample_apv.json -f table --no-exit-by-risk
-poetry run diff-risk examples/sample_apv.json -f json  --no-exit-by-risk
-poetry run diff-risk examples/sample_apv.json -f md    -o _intel/report.md --no-exit-by-risk
+
+# Text bars (mono, ideal para logs)
+poetry run diff-risk examples/sample_apv.json -f bar --no-exit-by-risk
+
+# JSON (para máquinas/CI)
+poetry run diff-risk examples/sample_apv.json -f json --no-exit-by-risk
+
+# Markdown report
+mkdir -p _intel
+poetry run diff-risk examples/sample_apv.json -f md -o _intel/report.md --no-exit-by-risk
 ```
 
-**Exit codes**: `0=green`, `1=yellow`, `2=red` (usa `--no-exit-by-risk` para forzar `0`).
+**Exit codes**: `0=green`, `1=yellow`, `2=red`. Usa `--no-exit-by-risk` para forzar `0` en demos.
 
 ### Web (opcional)
-
 ```bash
 poetry run diff-risk-web
-# Abrir: http://127.0.0.1:8000
+# Abre http://127.0.0.1:8000
 ```
 
 <!-- diff-risk:usage:end -->
+
 
 > Sin cambios en tu sistema ni shell. Usa el proyecto como **app Python** con su comando **`diff-risk`** tras instalarlo.
 
