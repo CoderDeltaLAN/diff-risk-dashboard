@@ -22,7 +22,7 @@ def _exit_code(risk: str) -> int:
     return {"green": 0, "yellow": 1, "red": 2}.get(risk, 0)
 
 
-def _summarize(apv: dict) -> dict:
+def _summarize(apv: dict) -> dict[str, int]:
     counts: dict[str, int] = {}
     for k, v in (apv.get("by_severity") or {}).items():
         counts[str(k).upper()] = int(v or 0)
