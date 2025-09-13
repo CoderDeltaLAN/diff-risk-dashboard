@@ -86,6 +86,7 @@ def _load_input(s: str) -> object:
     raise SystemExit(f"✗ Not found and not JSON: {s}")
 
 
+
 def _render_table(summary: Summary, console: Console) -> None:
     if summary.total == 0:
         console.print(
@@ -97,9 +98,8 @@ def _render_table(summary: Summary, console: Console) -> None:
         )
         return
 
-    title_dot = (
-        "🔴" if summary.risk_level == "red" else "🟡" if summary.risk_level == "yellow" else "🟢"
-    )
+    risk_to_dot = {"red": "🔴", "yellow": "🟡", "green": "🟢"}
+    title_dot = risk_to_dot.get(summary.risk_level, "🟢")
 
     table = Table(
         title=f"Diff Risk Dashboard {title_dot} — Worst: {summary.worst}",
