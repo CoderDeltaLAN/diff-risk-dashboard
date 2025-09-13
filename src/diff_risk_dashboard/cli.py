@@ -4,38 +4,70 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Literal, TypedDict
 
-from .core import Summary, summarize
+from .core import summarize_apv_json
+from .report import to_markdown
+
+
+class Summary(TypedDict):
+    total: int
+    worst: str
+    risk: Literal["red", "yellow", "green"]
+    by_severity: dict
 
 
 def _print_table(summary: Summary) -> None:
-    bs = summary["by_severity"]
-    rows = [
-        ("CRITICAL", bs["CRITICAL"]),
-        ("HIGH", bs["HIGH"]),
-        ("MEDIUM", bs["MEDIUM"]),
-        ("LOW", bs["LOW"]),
-        ("INFO", bs["INFO"]),
-    ]
-    print("\n=== Diff Risk Summary ===")
-    print(f"Total findings: {summary['total']}")
-    print("Severity counts:")
-    w = max(len(r[0]) for r in rows)
-    for name, cnt in rows:
-        print(f"  {name:<{w}} : {cnt}")
-    print(f"Worst severity : {summary['worst']}")
-    print(f"Risk level     : {summary['risk_level']}\n")
+    by = summary["by_severity"]
+    print("Severity\tCount")
+    for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]:
+        print(f"{sev}\t{by.get(sev, by.get(sev.lower(), 0))}")
+    print(f"TOTAL\t{summary['total']}")
 
 
-def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="Diff Risk Dashboard (APV JSON -> summary)")
-    p.add_argument("apv_json", help="Path to ai-patch-verifier JSON")
-    args = p.parse_args(argv)
-    data = json.loads(Path(args.apv_json).read_text(encoding="utf-8"))
-    sm = summarize(data)
-    _print_table(sm)
-    return 2 if sm["risk_level"] == "red" else (1 if sm["risk_level"] == "yellow" else 0)
+def _exit_code(risk: str) -> int:
+    # 0=green, 1=yellow, 2=red
+    return {"green": 0, "yellow": 1, "red": 2}.get(risk, 0)
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(prog="diff-risk")
+    p.add_argument("input", help="Path o texto JSON de APV (ai-patch-verifier)")
+    p.add_argument(
+        "-f",
+        "--format",
+        choices=["table", "json", "md"],
+        default="table",
+        help="Formato de salida (por defecto: table)",
+    )
+    p.add_argument(
+        "-o", "--output", default="-", help="Archivo de salida; '-' = stdout (por defecto)"
+    )
+    p.add_argument(
+        "--no-exit-by-risk", action="store_true", help="No ajustar el exit code por nivel de riesgo"
+    )
+    args = p.parse_args()
+
+    summary: Summary = summarize_apv_json(args.input)  # path o texto
+    out = ""
+    if args.format == "json":
+        out = json.dumps(summary, indent=2)
+    elif args.format == "md":
+        out = to_markdown(summary)
+    else:
+        _print_table(summary)
+
+    if args.format in {"json", "md"}:
+        if args.output == "-":
+            print(out)
+        else:
+            Path(args.output).write_text(out, encoding="utf-8")
+            print(f"Wrote {args.output}", file=sys.stderr)
+
+    if not args.no - exit - by - risk:
+        return _exit_code(summary["risk"])
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())
