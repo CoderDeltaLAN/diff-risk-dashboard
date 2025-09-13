@@ -223,3 +223,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+# ci: trigger checks for docs-only PR
