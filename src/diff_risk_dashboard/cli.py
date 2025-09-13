@@ -87,7 +87,7 @@ def _table_rich(summary: dict[str, Any], width: int) -> Table:
         w = max(1, round(n / maxc * bar_w))
         return "█" * w
 
-    title = Text.assemble(
+    title = Text.assemble(  # type: ignore[arg-type]
         ("Diff Risk Dashboard ", "bold"),
         (emoji + " ",),
         ("— Worst: ", "dim"),
