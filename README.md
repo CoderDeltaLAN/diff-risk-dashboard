@@ -1,11 +1,13 @@
 # ⭐ diff-risk-dashboard — APV → Risk Summary (Python CLI)
 
-
-[![Manual](https://img.shields.io/badge/Manual-User%20Guide-blue?style=for-the-badge)](docs/MANUAL.md)
 A lean, production-grade **Python CLI** that ingests **ai-patch-verifier (APV)** JSON and outputs a clear **risk summary** (table / JSON / Markdown).  
 Designed for **always-green CI**, with strict checks and exit codes per risk level to gate merges professionally.
 
 <div align="center">
+
+[![Manual](https://img.shields.io/badge/Manual-User%20Guide-blue?style=for-the-badge)](docs/MANUAL.md)
+
+<br/>
 
 [![CI / build](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/build.yml)
 [![CodeQL Analysis](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/codeql.yml)
@@ -17,7 +19,6 @@ Designed for **always-green CI**, with strict checks and exit codes per risk lev
 </div>
 
 ---
-
 ## Repo layout
 
 ```text
