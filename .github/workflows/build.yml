@@ -1,0 +1,66 @@
+name: CI / build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.11", "3.12" ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Ruff
+        run: poetry run ruff check .
+
+      - name: Black (check)
+        run: poetry run black --check .
+
+      - name: Pytest
+        env:
+          PYTHONPATH: src
+        run: poetry run pytest -q
+
+      - name: Mypy
+        run: poetry run mypy src
+
+      - name: Package & smoke-test CLI
+        run: |
+          poetry build
+          poetry run python -m pip install .
+          mkdir -p _intel
+          diff-risk examples/sample_apv.json -f md -o _intel/report.md
+
+      - name: Upload sample report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-report
+          path: _intel/report.md
