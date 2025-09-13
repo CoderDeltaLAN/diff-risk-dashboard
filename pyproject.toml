@@ -33,3 +33,7 @@ strict = true
 [tool.ruff.lint]
 select = ["E","F","I","UP"]
 ignore = []
+
+[tool.poetry.scripts]
+diff-risk = "diff_risk_dashboard.cli:main"
+diff-risk-web = "diff_risk_dashboard.web:main"
