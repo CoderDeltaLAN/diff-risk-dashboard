@@ -1,4 +1,6 @@
 from diff_risk_dashboard.core import summarize_apv_json
+
+
 def test_summary_counts(tmp_path):
     sample = tmp_path / "s.json"
     sample.write_text(
