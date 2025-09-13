@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
-[ $# -ge 1 ] || { echo "Usage: drb <apv.json|json-string>"; exit 2; }
-poetry run diff-risk "$1" -f bar --no-exit-by-risk
+if [ $# -lt 1 ]; then echo "Usage: drb <apv.json | raw-json>"; exit 2; fi
+exec poetry run diff-risk "$1" -f bar --no-exit-by-risk
