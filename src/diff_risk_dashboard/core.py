@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, Literal, TypedDict, cast
 
 Severity = Literal["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
@@ -43,7 +44,7 @@ def _norm_sev(s: str | None) -> Severity:
 
 
 def _iter_findings(obj: Any) -> Iterable[Finding]:
-    # APV: {"findings":[{...}]} o lista directa
+    # APV: {"findings":[...]} o lista directa
     if isinstance(obj, dict):
         cand = obj.get("findings", obj.get("results", []))
         if isinstance(cand, list):
@@ -58,20 +59,13 @@ def _iter_findings(obj: Any) -> Iterable[Finding]:
 
 
 def summarize(obj: Any) -> Summary:
-    counts: dict[str, int] = {
-        "CRITICAL": 0,
-        "HIGH": 0,
-        "MEDIUM": 0,
-        "LOW": 0,
-        "INFO": 0,
-    }
+    counts: dict[str, int] = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
     total = 0
     for f in _iter_findings(obj):
         sev = _norm_sev(cast(str | None, f.get("severity")))
         counts[sev] += 1
         total += 1
 
-    # peor severidad (evita E701)
     worst: Severity = "INFO"
     if counts["CRITICAL"] > 0:
         worst = "CRITICAL"
@@ -82,7 +76,6 @@ def summarize(obj: Any) -> Summary:
     elif counts["LOW"] > 0:
         worst = "LOW"
 
-    # nivel de riesgo
     if worst in {"CRITICAL", "HIGH"}:
         risk: Literal["red", "yellow", "green"] = "red"
     elif worst == "MEDIUM":
@@ -104,7 +97,12 @@ def summarize(obj: Any) -> Summary:
     }
 
 
-def summarize_apv_json(text: str | bytes) -> Summary:
-    """Compat para tests de humo: recibe JSON en texto y devuelve Summary."""
-    data = json.loads(text)
+def summarize_apv_json(text_or_path: str | bytes) -> Summary:
+    """Acepta JSON (str/bytes) o una ruta a archivo JSON."""
+    if isinstance(text_or_path, bytes):
+        payload = text_or_path.decode("utf-8", errors="strict")
+    else:
+        p = Path(text_or_path)
+        payload = p.read_text(encoding="utf-8") if p.exists() else text_or_path
+    data = json.loads(payload)
     return summarize(data)
