@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[ $# -ge 1 ] || { echo "Usage: drm <apv.json|json-string> [outfile.md]"; exit 2; }
+out="${2:-_intel/report.md}"
+mkdir -p "$(dirname "$out")"
+poetry run diff-risk "$1" -f md -o "$out" --no-exit-by-risk
+echo "Wrote $out"
