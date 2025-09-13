@@ -1,5 +1,7 @@
 # ⭐ diff-risk-dashboard — APV → Risk Summary (Python CLI)
 
+
+[![Manual](https://img.shields.io/badge/Manual-User%20Guide-blue?style=for-the-badge)](docs/MANUAL.md)
 A lean, production-grade **Python CLI** that ingests **ai-patch-verifier (APV)** JSON and outputs a clear **risk summary** (table / JSON / Markdown).  
 Designed for **always-green CI**, with strict checks and exit codes per risk level to gate merges professionally.
 
@@ -37,33 +39,39 @@ Designed for **always-green CI**, with strict checks and exit codes per risk lev
 
 <!-- diff-risk:usage:start -->
 
-## 🚀 Usage (short aliases)
+## 🚀 Usage
 
-### CLI (recommended colorful table)
+### Short commands
+- `drt <apv.json | raw-json>` – color table (TTY)
+- `drb <apv.json | raw-json>` – text bars (logs)
+- `drj <apv.json | raw-json>` – JSON (CI)
+- `drmd <apv.json | raw-json>` – Markdown (stdout)
+
 ```bash
-# green panel (empty sample)
-./bin/drt examples/sample_apv.empty.json
-
-# real example with findings
-./bin/drt examples/sample_apv.json
-```
-
-Other formats:
-```bash
-./bin/drb  examples/sample_apv.json                   # text bars
-./bin/drj  examples/sample_apv.json                   # JSON (CI/machines)
-./bin/drmd examples/sample_apv.json _intel/report.md  # Markdown file
-```
-
-Tip: to call aliases without `./bin/` temporarily:
-```bash
-export PATH="$PWD/bin:$PATH"
+# Demo (bundled sample)
 drt examples/sample_apv.json
+
+# Inline JSON (single quotes outside, double inside)
+drt '{"by_severity":{"CRITICAL":0,"HIGH":1,"MEDIUM":1,"LOW":1,"INFO":0}}'
+
+# Your real file
+APV="/absolute/path/to/your_apv.json"; drt "$APV"
+
+# Other formats with the same input
+drb "$APV"              # bars (logs)
+drj "$APV"              # JSON (CI)
+drmd "$APV" > report.md # Markdown to file
+
+# Force colors for recordings
+script -qfc "drt $APV" /dev/null
 ```
 
-**Exit codes**: `0=green`, `1=yellow`, `2=red` (`--no-exit-by-risk` forces `0` for demos).
+> Exit codes: wrappers return `0` thanks to `--no-exit-by-risk`.  
+> CLI raw (without wrappers) sets exit code by risk unless you add `--no-exit-by-risk`.
 
 <!-- diff-risk:usage:end -->
+
+
 
 
 > Sin cambios en tu sistema ni shell. Usa el proyecto como **app Python** con su comando **`diff-risk`** tras instalarlo.
