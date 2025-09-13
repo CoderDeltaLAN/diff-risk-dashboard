@@ -22,8 +22,8 @@ def _exit_code(risk: str) -> int:
     return {"green": 0, "yellow": 1, "red": 2}.get(risk, 0)
 
 
-def _summarize(apv: dict) -> dict[str, int]:
-    counts: dict[str, int] = {}
+def _summarize(apv: dict) -> dict[str, int][str, int]:
+    counts: dict[str, int][str, int] = {}
     for k, v in (apv.get("by_severity") or {}).items():
         counts[str(k).upper()] = int(v or 0)
     total = sum(counts.get(s, 0) for s in _SEVERITIES)
@@ -33,7 +33,7 @@ def _summarize(apv: dict) -> dict[str, int]:
 
 
 def _table_plain(summary: dict[str, Any]) -> str:
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
+    counts: dict[str, int][str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
     total = int(summary["total"])
     w_sev = max(len("Severity"), max(len(s) for s in _SEVERITIES))
     w_cnt = max(len("Count"), len(str(total)))
@@ -51,7 +51,7 @@ def _table_plain(summary: dict[str, Any]) -> str:
 
 
 def _bar_plain(summary: dict[str, Any], width: int = 80) -> str:
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
+    counts: dict[str, int][str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
     total = int(summary["total"])
     maxc = max(counts.values()) if counts else 0
     bar_w = max(10, min(40, width - 24))
@@ -66,7 +66,7 @@ def _bar_plain(summary: dict[str, Any], width: int = 80) -> str:
 
 
 def _table_rich(summary: dict[str, Any], width: int) -> Table:
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
+    counts: dict[str, int][str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
     total = int(summary["total"])
     worst = str(summary.get("worst", "UNKNOWN")).upper()
     risk = str(summary.get("risk", summary.get("risk_level", "green")) or "green").lower()
@@ -126,7 +126,7 @@ def _table_rich(summary: dict[str, Any], width: int) -> Table:
 
 def _bar_rich(summary: dict[str, Any], width: int) -> None:
     console = Console()
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
+    counts: dict[str, int][str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
     total = int(summary["total"])
     maxc = max(counts.values()) if counts else 0
     bar_w = max(10, min(40, width - 24))
