@@ -38,3 +38,6 @@ ignore = []
 [tool.poetry.scripts]
 diff-risk = "diff_risk_dashboard.cli:main"
 diff-risk-web = "diff_risk_dashboard.web:main"
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"
