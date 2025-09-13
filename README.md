@@ -37,28 +37,34 @@ Designed for **always-green CI**, with strict checks and exit codes per risk lev
 
 <!-- diff-risk:usage:start -->
 
-### CLI usage
+## 🚀 Usage (short aliases)
 
+### CLI (recommended colorful table)
 ```bash
-# Mostrar ayuda
-poetry run diff-risk -h
+# green panel (empty sample)
+./bin/drt examples/sample_apv.empty.json
 
-# Ejemplos de salida
-poetry run diff-risk examples/sample_apv.json -f table --no-exit-by-risk
-poetry run diff-risk examples/sample_apv.json -f json  --no-exit-by-risk
-poetry run diff-risk examples/sample_apv.json -f md    -o _intel/report.md --no-exit-by-risk
+# real example with findings
+./bin/drt examples/sample_apv.json
 ```
 
-**Exit codes**: `0=green`, `1=yellow`, `2=red` (usa `--no-exit-by-risk` para forzar `0`).
-
-### Web (opcional)
-
+Other formats:
 ```bash
-poetry run diff-risk-web
-# Abrir: http://127.0.0.1:8000
+./bin/drb  examples/sample_apv.json                   # text bars
+./bin/drj  examples/sample_apv.json                   # JSON (CI/machines)
+./bin/drmd examples/sample_apv.json _intel/report.md  # Markdown file
 ```
+
+Tip: to call aliases without `./bin/` temporarily:
+```bash
+export PATH="$PWD/bin:$PATH"
+drt examples/sample_apv.json
+```
+
+**Exit codes**: `0=green`, `1=yellow`, `2=red` (`--no-exit-by-risk` forces `0` for demos).
 
 <!-- diff-risk:usage:end -->
+
 
 > Sin cambios en tu sistema ni shell. Usa el proyecto como **app Python** con su comando **`diff-risk`** tras instalarlo.
 
