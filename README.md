@@ -1,304 +1,36 @@
-# ⭐ diff-risk-dashboard — APV → Risk Summary (Python CLI)
+# Diff Risk Dashboard
 
-A lean, production-grade **Python CLI** that ingests **ai-patch-verifier (APV)** JSON and outputs a clear **risk summary** (table / JSON / Markdown).  
-Designed for **always-green CI**, with strict checks and exit codes per risk level to gate merges professionally.
-
-<div align="center">
-
-[![CI / build](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/build.yml)
-[![CodeQL Analysis](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/codeql.yml)
-[![Release](https://img.shields.io/github/v/release/CoderDeltaLAN/diff-risk-dashboard?display_name=tag)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/releases)
-![Python 3.11|3.12](https://img.shields.io/badge/Python-3.11%20|%203.12-3776AB?logo=python)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Donate](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=YVENCBNCZWVPW)
-
-</div>
-
----
-
-## Repo layout
-
-```text
-.
-├── examples/
-│   └── sample_apv.json           # APV sample for demos/tests
-├── src/diff_risk_dashboard/
-│   ├── __main__.py               # module entry
-│   ├── cli.py                    # CLI
-│   ├── core.py                   # summarization logic
-│   └── report.py                 # Markdown generator
-├── tests/                        # pytest
-└── .github/workflows/            # CI + CodeQL + Release Drafter
-```
-
----
-
-## 🚀 Quick Start (end users)
+Summarizes AI Patch Verifier (APV) JSON into a clean, professional terminal table, text bars, JSON, or Markdown report.
 
 <!-- diff-risk:usage:start -->
 
-## 🚀 Usage (short aliases)
+## 🚀 Usage
 
-### CLI (recommended colorful table)
+### Short commands
+- `drt <apv.json | raw-json>` — color table (TTY)
+- `drb <apv.json | raw-json>` — text bars (logs)
+- `drj <apv.json | raw-json>` — JSON (CI)
+- `drmd <apv.json | raw-json>` — Markdown (stdout)
+
 ```bash
-# green panel (empty sample)
-./bin/drt examples/sample_apv.empty.json
-
-# real example with findings
-./bin/drt examples/sample_apv.json
-```
-
-Other formats:
-```bash
-./bin/drb  examples/sample_apv.json                   # text bars
-./bin/drj  examples/sample_apv.json                   # JSON (CI/machines)
-./bin/drmd examples/sample_apv.json _intel/report.md  # Markdown file
-```
-
-Tip: to call aliases without `./bin/` temporarily:
-```bash
-export PATH="$PWD/bin:$PATH"
+# Demo (bundled sample)
 drt examples/sample_apv.json
+
+# Inline JSON (single quotes outside, double quotes inside)
+drt '{"by_severity":{"CRITICAL":0,"HIGH":1,"MEDIUM":1,"LOW":1,"INFO":0}}'
+
+# Your real file
+APV="/absolute/path/to/your_apv.json"; drt "$APV"
+
+# Other formats with the same input
+drb "$APV"              # bars (logs)
+drj "$APV"              # JSON (CI)
+mkdir -p _intel && drmd "$APV" > _intel/report.md  # Markdown to file
+
+# Force colors for recordings
+script -qfc "drt $APV" /dev/null
 ```
 
-**Exit codes**: `0=green`, `1=yellow`, `2=red` (`--no-exit-by-risk` forces `0` for demos).
+> Exit codes: `0=green`, `1=yellow`, `2=red`. Use `--no-exit-by-risk` to force `0` in demos.
 
 <!-- diff-risk:usage:end -->
-
-
-> Sin cambios en tu sistema ni shell. Usa el proyecto como **app Python** con su comando **`diff-risk`** tras instalarlo.
-
-```bash
-# 1) Clonar
-git clone https://github.com/CoderDeltaLAN/diff-risk-dashboard.git
-cd diff-risk-dashboard
-
-# 2) Instalar como paquete (aislado con pipx, o pip estándar)
-# Opción A (recomendada): pipx
-pipx install .
-# Opción B: pip usuario
-python -m pip install --user .
-
-# 3) Usar el comando instalado
-diff-risk examples/sample_apv.json --format md --output report.md
-```
-
-### CLI usage
-
-```bash
-diff-risk -h
-```
-
-```
-usage: diff_risk_dashboard [-h] [-f {table,json,md}] [-o OUTPUT]
-                           [--no-exit-by-risk]
-                           input
-
-Diff Risk Dashboard (APV JSON -> summary)
-
-positional arguments:
-  input                 Path o texto JSON de ai-patch-verifier
-
-options:
-  -h, --help            show this help message and exit
-  -f {table,json,md}, --format {table,json,md}
-                        Formato de salida
-  -o OUTPUT, --output OUTPUT
-                        Archivo de salida; '-' = stdout
-  --no-exit-by-risk     No ajustar el exit code por nivel de riesgo
-```
-
-#### Examples
-
-Table (por defecto, al stdout):
-
-```bash
-diff-risk examples/sample_apv.json
-```
-
-JSON (ideal para piping/automatización):
-
-```bash
-diff-risk examples/sample_apv.json -f json
-```
-
-Markdown a archivo (para adjuntar en PRs/Wikis):
-
-```bash
-diff-risk examples/sample_apv.json -f md -o report.md
-```
-
-Salida Markdown de ejemplo:
-
-```md
-# Diff Risk Dashboard 🔴 — Worst: **HIGH**
-
-| Severity | Count |
-|---|---:|
-| CRITICAL | 0 |
-| HIGH | 1 |
-| MEDIUM | 1 |
-| LOW | 1 |
-| INFO | 0 |
-| **TOTAL** | **3** |
-
-> Generated by diff-risk-dashboard CLI
-```
-
----
-
-## 📦 What the tool expects (APV JSON)
-
-- Entrada: JSON con findings tipo APV, ej. objetos que incluyen `predicted_risk` (`low|medium|high`).
-- El sumario **normaliza mayúsculas/minúsculas** y calcula:
-  - `total`
-  - `by_severity` (claves `CRITICAL|HIGH|MEDIUM|LOW|INFO` y también minúsculas)
-  - `worst`
-  - `risk_level` (`red|yellow|green`)
-
-Ejemplo de salida `-f json`:
-
-```json
-{
-  "total": 3,
-  "by_severity": {
-    "critical": 0,
-    "high": 1,
-    "medium": 1,
-    "low": 1,
-    "info": 0,
-    "CRITICAL": 0,
-    "HIGH": 1,
-    "MEDIUM": 1,
-    "LOW": 1,
-    "INFO": 0
-  },
-  "worst": "HIGH",
-  "risk_level": "red"
-}
-```
-
----
-
-## ⛳ Exit codes (CI gating)
-
-- `green` → **0**
-- `yellow` → **1**
-- `red` → **2**
-
-Por defecto, el proceso **sale** con el código según `risk_level`.  
-Para desactivar este comportamiento (p.ej., en local o cuando solo generas reportes):
-
-```bash
-diff-risk examples/sample_apv.json --no-exit-by-risk
-```
-
----
-
-## 🧪 Local Developer Workflow (mirrors CI)
-
-```bash
-# Requisitos de desarrollo
-python -m pip install --upgrade pip
-pip install poetry
-
-# Instalar deps
-poetry install --no-interaction
-
-# Gates locales
-poetry run ruff check .
-poetry run black --check .
-PYTHONPATH=src poetry run pytest -q
-poetry run mypy src
-```
-
----
-
-## 🔧 CI (GitHub Actions)
-
-- Matriz **Python 3.11 / 3.12** alineada con los gates locales.
-- **CodeQL** en PRs y `main`.
-- **Release Drafter** para changelog/release notes.
-- **Branch protection** y merges seguros (historial lineal via squash).
-
-Fragmento típico del job Python:
-
-```yaml
-- run: python -m pip install --upgrade pip
-- run: pip install poetry
-- run: poetry install --no-interaction
-- run: poetry run ruff check .
-- run: poetry run black --check .
-- env:
-    PYTHONPATH: src
-  run: poetry run pytest -q
-- run: poetry run mypy src
-# Ejemplo de uso del CLI en CI:
-- run: poetry run python -m pip install .
-- run: diff-risk examples/sample_apv.json -f md -o report.md
-```
-
----
-
-## 🗺 When to Use This Project
-
-- Necesitas **resumen de riesgo** claro y portable a partir de **APV**.
-- Quieres **bloquear merges** cuando el riesgo supera el umbral (exit codes).
-- Buscas **reportes en Markdown/JSON** para PRs, auditorías y tableros.
-
----
-
-## 🧩 Customization
-
-- Genera tus propios APV JSON y pásalos como `input`.
-- Cambia el formato con `--format` (**table/json/md**) y redirige a archivo con `--output`.
-- Integra el JSON de salida con otras herramientas o dashboards.
-
----
-
-## 🔒 Security
-
-- Sin cambios en tu shell o sistema: **no** requiere editar `.zshrc` ni configuración del usuario.
-- CodeQL activo; se recomienda usar repos **privados** para datos sensibles.
-- No subas JSON con información confidencial a PRs públicos.
-
----
-
-## 🙌 Contributing
-
-- PRs pequeños y atómicos, estilo **Conventional Commits**.
-- Mantén los **gates** verdes antes de solicitar revisión.
-- Activa **auto-merge** cuando pasen los checks.
-
----
-
-## 💚 Donations & Sponsorship
-
-If this project saves you time, consider supporting ongoing maintenance. Thank you!  
-[![Donate](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=YVENCBNCZWVPW)
-
----
-
-## 🔎 SEO Keywords
-
-apv risk summary cli, ai patch verifier json, diff risk dashboard python,  
-markdown security report, always green ci python, ruff black pytest mypy,  
-github actions codeql release drafter, branch protection required checks,  
-console scripts professional cli ux
-
----
-
-## 👤 Author
-
-**CoderDeltaLAN (Yosvel)**  
-GitHub: https://github.com/CoderDeltaLAN
-
----
-
-## 📄 License
-
-Released under the **MIT License**. See [LICENSE](LICENSE).
-
----
-
-**Download this README**: This same file can be downloaded from the chat link.

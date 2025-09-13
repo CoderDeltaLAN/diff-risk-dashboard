@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
-if [ $# -lt 1 ]; then echo "Usage: drmd <apv.json | raw-json>"; exit 2; fi
-arg="$1"
-if [[ "$arg" == \{* || "$arg" == \[* ]]; then tmp="$(mktemp)"; printf '%s' "$arg" > "$tmp"; trap 'rm -f "$tmp"' EXIT; exec poetry run diff-risk "$tmp" -f md --no-exit-by-risk; fi
-exec poetry run diff-risk "$arg" -f md --no-exit-by-risk
+SRC="$(bin/_dr_common.sh "${1-}")"
+exec poetry run diff-risk "$SRC" -f md --no-exit-by-risk

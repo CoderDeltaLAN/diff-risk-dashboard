@@ -1,225 +1,200 @@
+from __future__ import annotations
+
 import argparse
 import json
-import sys
-from pathlib import Path
-from typing import Any
+import os
+from typing import Dict, Iterable, List, Mapping, Tuple
 
-from rich.box import ROUNDED
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
-from .report import to_markdown
-
-_SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+from .report import Summary, SEVERITIES, to_markdown
 
 
-def _risk_emoji(risk: str) -> str:
-    return {"red": "🔴", "yellow": "🟡", "green": "🟢"}.get(risk, "🟢")
+SEV_ORDER: Tuple[str, ...] = tuple(SEVERITIES)
+SEV_TO_COLOR: Dict[str, str] = {
+    "CRITICAL": "bold bright_red",
+    "HIGH": "red3",
+    "MEDIUM": "yellow3",
+    "LOW": "sky_blue3",
+    "INFO": "green3",
+}
 
 
-def _exit_code(risk: str) -> int:
-    return {"green": 0, "yellow": 1, "red": 2}.get(risk, 0)
+def _normalize(sev: str) -> str:
+    return sev.strip().upper()
 
 
-def _summarize(apv: dict) -> dict:
-    counts: dict[str, int] = {}
-    for k, v in (apv.get("by_severity") or {}).items():
-        counts[str(k).upper()] = int(v or 0)
-    total = sum(counts.get(s, 0) for s in _SEVERITIES)
-    worst = next((s for s in _SEVERITIES if counts.get(s, 0) > 0), "INFO")
-    risk = str(apv.get("risk_level") or apv.get("risk") or "green").lower()
-    return {"total": total, "by_severity": counts, "worst": worst, "risk_level": risk}
+def _count_by_severity_from_list(items: Iterable[Mapping[str, object]]) -> Dict[str, int]:
+    counts: Dict[str, int] = {k: 0 for k in SEVERITIES}
+    for it in items:
+        raw = it.get("severity") or it.get("level") or ""
+        sev = _normalize(str(raw))
+        if sev in counts:
+            counts[sev] += 1
+    return counts
 
 
-def _table_plain(summary: dict[str, Any]) -> str:
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
-    total = int(summary["total"])
-    w_sev = max(len("Severity"), max(len(s) for s in _SEVERITIES))
-    w_cnt = max(len("Count"), len(str(total)))
-    header = f'{"Severity".ljust(w_sev)}  {"Count".rjust(w_cnt)}  {"Share":>5}'
-    sep = f'{"-"*w_sev}  {"-"*w_cnt}  {"-"*5}'
-    lines = [header, sep]
-    for s in _SEVERITIES:
-        n = counts.get(s, 0)
-        pct = f"{(n/total*100):.0f}%" if total else "0%"
-        lines.append(f"{s.ljust(w_sev)}  {str(n).rjust(w_cnt)}  {pct:>5}")
-    lines.append(
-        f'{"TOTAL".ljust(w_sev)}  {str(total).rjust(w_cnt)}  ' f'{"100%" if total else "0%":>5}'
-    )
-    return "\n".join(lines)
+def _build_summary(apv_obj: object) -> Summary:
+    # Soportar dos formas:
+    # 1) {"by_severity": {"HIGH": 1, ...}}
+    # 2) [ {"severity": "HIGH"}, ... ]
+    counts: Dict[str, int] = {k: 0 for k in SEVERITIES}
+
+    if isinstance(apv_obj, Mapping):
+        bs = apv_obj.get("by_severity")
+        if isinstance(bs, Mapping):
+            for k, v in bs.items():
+                kk = _normalize(str(k))
+                if kk in counts:
+                    try:
+                        counts[kk] += int(v)  # type: ignore[arg-type]
+                    except Exception:
+                        pass
+        # fallback: lista en "findings" / "items"
+        items = apv_obj.get("findings") or apv_obj.get("items")
+        if isinstance(items, list) and not any(counts.values()):
+            counts = _count_by_severity_from_list(items)  # type: ignore[arg-type]
+    elif isinstance(apv_obj, list):
+        counts = _count_by_severity_from_list(apv_obj)  # type: ignore[arg-type]
+
+    total = sum(counts.values())
+    # peor severidad
+    worst = "INFO"
+    for sev in SEV_ORDER:
+        if counts.get(sev, 0) > 0:
+            worst = sev
+            break
+    # nivel de riesgo
+    risk = "green"
+    if worst in ("CRITICAL", "HIGH"):
+        risk = "red"
+    elif worst in ("MEDIUM", "LOW"):
+        risk = "yellow"
+
+    return Summary(total=total, by_severity=counts, worst=worst, risk_level=risk)
 
 
-def _bar_plain(summary: dict[str, Any], width: int = 80) -> str:
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
-    total = int(summary["total"])
-    maxc = max(counts.values()) if counts else 0
-    bar_w = max(10, min(40, width - 24))
-    lines = []
-    for s in _SEVERITIES:
-        n = counts.get(s, 0)
-        w = 0 if maxc == 0 or n == 0 else max(1, round(n / maxc * bar_w))
-        pct = f"{(n/total*100):.0f}%" if total else "0%"
-        lines.append(f"{s:<8} {str(n).rjust(4)} {pct:>4}  " + ("█" * w))
-    lines.append(f'{"TOTAL":<8} {str(total).rjust(4)} 100%')
-    return "\n".join(lines)
+def _load_input(s: str) -> object:
+    # Si existe ruta -> JSON desde archivo
+    if os.path.isfile(s):
+        with open(s, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    # Si parece JSON inline ({ o [) -> parsear
+    if s.lstrip().startswith("{") or s.lstrip().startswith("["):
+        return json.loads(s)
+    raise SystemExit(f"✗ Not found and not JSON: {s}")
 
 
-def _table_rich(summary: dict[str, Any], width: int) -> Table:
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
-    total = int(summary["total"])
-    worst = str(summary.get("worst", "UNKNOWN")).upper()
-    risk = str(summary.get("risk", summary.get("risk_level", "green")) or "green").lower()
-    emoji = _risk_emoji(risk)
-    colors = {
-        "CRITICAL": "bold bright_red",
-        "HIGH": "red3",
-        "MEDIUM": "yellow3",
-        "LOW": "green3",
-        "INFO": "cyan3",
-    }
-    maxc = max(counts.values()) if counts else 0
-    bar_w = max(10, min(32, width - 42))
+def _render_table(summary: Summary, console: Console) -> None:
+    if summary.total == 0:
+        console.print(
+            Panel.fit("✅ No findings", border_style="green", title="Diff Risk Dashboard")
+        )
+        return
 
-    def bar(n: int) -> str:
-        if maxc == 0 or n == 0:
-            return ""
-        w = max(1, round(n / maxc * bar_w))
-        return "█" * w
-
-    title = Text.assemble(
-        ("Diff Risk Dashboard ", "bold"),
-        (emoji + " ",),
-        ("— Worst: ", "dim"),
-        (worst, "bold"),
+    title_dot = (
+        "🔴" if summary.risk_level == "red" else "🟡" if summary.risk_level == "yellow" else "🟢"
     )
     table = Table(
-        title=title,
-        header_style="bold cyan",
-        box=ROUNDED,
+        title=f"Diff Risk Dashboard {title_dot} — Worst: {summary.worst}",
+        title_justify="center",
+        show_header=True,
+        header_style="bold",
         expand=True,
-        show_lines=False,
-        pad_edge=False,
     )
-    table.add_column("Severity", justify="left", no_wrap=True)
+    table.add_column("Severity")
     table.add_column("Count", justify="right")
     table.add_column("Share", justify="right")
-    table.add_column("Bar", justify="left", no_wrap=True)
-    for s in _SEVERITIES:
-        n = counts.get(s, 0)
-        pct = f"{(n/total*100):.0f}%" if total else "0%"
-        col = colors.get(s, "")
-        table.add_row(
-            f"[{col}]{s}[/]",
-            f"[{col}]{n}[/]",
-            f"[{col}]{pct}[/]",
-            f"[{col}]{bar(n)}[/]",
-        )
-    table.add_row(
-        "[bold]TOTAL[/bold]",
-        f"[bold]{total}[/bold]",
-        "[bold]100%[/bold]" if total else "0%",
-        "",
-    )
-    return table
+    table.add_column("Bar")
+
+    total = max(1, summary.total)
+    # ancho aproximado para barra proporcional
+    bar_width = max(10, min(48, console.size.width - 60))
+
+    for sev in SEVERITIES:
+        c = summary.by_severity.get(sev, 0)
+        share = int(round((c / total) * 100))
+        blocks = "█" * int(round((share / 100) * bar_width))
+        style = SEV_TO_COLOR.get(sev, "")
+        table.add_row(sev, str(c), f"{share}%", f"[{style}]{blocks}[/{style}]")
+
+    table.add_row("TOTAL", str(summary.total), "100%" if summary.total else "0%", "")
+    console.print(table)
+    console.print("Tip: usa  -f md  para reporte Markdown o  -f json  para máquinas.", style="dim")
 
 
-def _bar_rich(summary: dict[str, Any], width: int) -> None:
-    console = Console()
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
-    total = int(summary["total"])
-    maxc = max(counts.values()) if counts else 0
-    bar_w = max(10, min(40, width - 24))
-    colors = {
-        "CRITICAL": "bright_red",
-        "HIGH": "red3",
-        "MEDIUM": "yellow3",
-        "LOW": "green3",
-        "INFO": "cyan3",
-    }
-    for s in _SEVERITIES:
-        n = counts.get(s, 0)
-        w = 0 if maxc == 0 or n == 0 else max(1, round(n / maxc * bar_w))
-        pct = f"{(n/total*100):.0f}%" if total else "0%"
-        console.print(
-            f"[{colors[s]}]{s:<8}[/] "
-            f"[{colors[s]}]{n:>4} {pct:>4}[/]  "
-            f"[{colors[s]}]{'█'*w}[/]"
-        )
-    console.print(f"[bold]TOTAL[/bold] {total:>4} 100%")
+def _render_bars(summary: Summary) -> None:
+    total = max(1, summary.total)
+    for sev in SEVERITIES + ["TOTAL"]:
+        if sev == "TOTAL":
+            c = summary.total
+            pct = 100 if summary.total else 0
+        else:
+            c = summary.by_severity.get(sev, 0)
+            pct = int(round((c / total) * 100))
+        print(f"{sev:<10} {c:>4} {pct:>3}%  {'█' * int(pct/4)}")
 
 
-def main() -> int:
+def main() -> None:
     p = argparse.ArgumentParser(
-        prog="diff_risk_dashboard",
-        description="Diff Risk Dashboard (APV JSON -> summary)",
+        prog="diff_risk_dashboard", description="Diff Risk Dashboard (APV JSON -> summary)"
     )
-    p.add_argument("input", help="Path o texto JSON de ai-patch-verifier")
+    p.add_argument("input", help="File path or inline JSON from ai-patch-verifier")
     p.add_argument(
         "-f",
         "--format",
-        choices=["table", "json", "md", "bar"],
+        choices=("table", "json", "md", "bar"),
         default="table",
-        help="Formato de salida",
+        help="Output format",
     )
+    p.add_argument("-o", "--output", default="-", help="Output file; '-' = stdout")
     p.add_argument(
-        "-o",
-        "--output",
-        default="-",
-        help="Archivo de salida; '-' = stdout",
-    )
-    p.add_argument(
-        "--no-exit-by-risk",
-        action="store_true",
-        help="No ajustar el exit code por nivel de riesgo",
+        "--no-exit-by-risk", action="store_true", help="Do not set exit code by risk level"
     )
     args = p.parse_args()
 
-    apv = (
-        json.loads(Path(args.input).read_text(encoding="utf-8"))
-        if Path(args.input).exists()
-        else json.loads(args.input)
-    )
-    summary = _summarize(apv)
-    fmt = args.format.lower()
-    out: str | None = None
+    apv_obj = _load_input(args.input)
+    summary = _build_summary(apv_obj)
 
-    if fmt == "table":
-        if args.output == "-" and sys.stdout.isatty():
-            console = Console()
-            console.print(_table_rich(summary, console.width))
-            console.print(
-                Text(
-                    "Tip: usa  -f md  para reporte Markdown o  -f json  para máquinas.",
-                    style="dim",
-                )
-            )
+    if args.format == "json":
+        payload = {
+            "total": summary.total,
+            "by_severity": summary.by_severity,
+            "worst": summary.worst,
+            "risk_level": summary.risk_level,
+        }
+        out = json.dumps(payload, ensure_ascii=False, indent=2)
+        if args.output == "-" or not args.output:
+            print(out)
         else:
-            out = _table_plain(summary) + "\n"
-    elif fmt == "bar":
-        if args.output == "-" and sys.stdout.isatty():
-            _bar_rich(summary, Console().width)
-        else:
-            out = _bar_plain(summary) + "\n"
-    elif fmt == "json":
-        out = json.dumps(summary, indent=2, ensure_ascii=False) + "\n"
-    elif fmt == "md":
-        out = to_markdown(summary) + "\n"
-    else:
-        out = _table_plain(summary) + "\n"
+            with open(args.output, "w", encoding="utf-8") as fh:
+                fh.write(out + "\n")
 
-    if out is not None:
-        if args.output == "-":
-            sys.stdout.write(out)
+    elif args.format == "md":
+        md = to_markdown(summary)
+        if args.output == "-" or not args.output:
+            print(md)
         else:
-            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-            Path(args.output).write_text(out, encoding="utf-8")
-            print(f"Wrote {args.output}")
+            with open(args.output, "w", encoding="utf-8") as fh:
+                fh.write(md)
 
+    elif args.format == "bar":
+        _render_bars(summary)
+
+    else:  # table (TTY pretty)
+        console = Console(force_jupyter=False, force_terminal=None, soft_wrap=False)
+        _render_table(summary, console)
+
+    # Exit code unless overridden
     if not args.no_exit_by_risk:
-        return _exit_code(str(summary.get("risk", summary.get("risk_level", "green"))).lower())
-    return 0
+        if summary.risk_level == "red":
+            raise SystemExit(2)
+        if summary.risk_level == "yellow":
+            raise SystemExit(1)
+    raise SystemExit(0)
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
