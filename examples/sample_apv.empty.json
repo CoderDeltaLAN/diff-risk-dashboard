@@ -1,0 +1,9 @@
+{
+  "total": 0,
+  "by_severity": {
+    "critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0,
+    "CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0
+  },
+  "worst": "INFO",
+  "risk_level": "green"
+}
