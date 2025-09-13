@@ -1,11 +1,8 @@
-# FastAPI opcional: no se importa en tiempo de análisis para evitar fallos de mypy/CI.
-# Uso local:
-#   python -m pip install "fastapi>=0.110" "uvicorn[standard]>=0.27"
-#   python -m diff_risk_dashboard.web
 from __future__ import annotations
 
 from typing import Any
 
+# Importes perezosos para no requerir fastapi/uvicorn en CI
 from .core import summarize_apv_json
 from .report import to_markdown
 
@@ -15,10 +12,9 @@ def create_app() -> Any:
     responses = __import__("fastapi.responses", fromlist=["HTMLResponse"])
     FastAPI = getattr(fastapi, "FastAPI")
     HTMLResponse = getattr(responses, "HTMLResponse")
+    app: Any = FastAPI(title="Diff Risk Dashboard")
 
-    app = FastAPI(title="Diff Risk Dashboard")
-
-    @app.get("/", response_class=HTMLResponse)
+    @app.get("/", response_class=HTMLResponse)  # type: ignore[misc]
     def index() -> Any:
         return HTMLResponse(
             content="""
@@ -33,11 +29,10 @@ def create_app() -> Any:
             status_code=200,
         )
 
-    @app.post("/summarize", response_class=HTMLResponse)
+    @app.post("/summarize", response_class=HTMLResponse)  # type: ignore[misc]
     async def summarize(file: Any) -> Any:
         data = await file.read()
-        text = data.decode("utf-8")
-        summary = summarize_apv_json(text)
+        summary = summarize_apv_json(data.decode("utf-8"))
         md = to_markdown(summary).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         return HTMLResponse(f"<pre>{md}</pre>", status_code=200)
 
