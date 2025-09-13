@@ -1,0 +1,15 @@
+name: audit-main-push
+on:
+  push:
+    branches: [main]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if direct push (non-PR merge)
+        run: |
+          echo "Actor: $GITHUB_ACTOR"
+          if [ "$GITHUB_ACTOR" != "web-flow" ]; then
+            echo "Direct push to main detected (no branch protection available on private Free)."
+            exit 1
+          fi
