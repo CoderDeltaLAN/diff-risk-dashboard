@@ -26,9 +26,7 @@ def _normalize(sev: str) -> str:
     return sev.strip().upper()
 
 
-def _count_by_severity_from_list(
-    items: Iterable[Mapping[str, Any]],
-) -> dict[str, int]:
+def _count_by_severity_from_list(items: Iterable[Mapping[str, Any]]) -> dict[str, int]:
     counts: dict[str, int] = {k: 0 for k in SEVERITIES}
     for it in items:
         raw = it.get("severity") or it.get("level") or ""
@@ -39,9 +37,6 @@ def _count_by_severity_from_list(
 
 
 def _build_summary(apv_obj: object) -> Summary:
-    # Soporta:
-    # 1) {"by_severity": {"HIGH": 1, ...}}
-    # 2) [{"severity": "HIGH"}, ...] o en "findings"/"items"
     counts: dict[str, int] = {k: 0 for k in SEVERITIES}
 
     if isinstance(apv_obj, Mapping):
@@ -51,14 +46,18 @@ def _build_summary(apv_obj: object) -> Summary:
                 kk = _normalize(str(k))
                 if kk in counts:
                     try:
-                        counts[kk] += int(v)  # type: ignore[arg-type]
+                        counts[kk] += int(v)
                     except Exception:
                         pass
+
         items = apv_obj.get("findings") or apv_obj.get("items")
         if isinstance(items, list) and not any(counts.values()):
-            counts = _count_by_severity_from_list(items)  # type: ignore[arg-type]
+            items_m = [x for x in items if isinstance(x, Mapping)]
+            counts = _count_by_severity_from_list(items_m)
+
     elif isinstance(apv_obj, list):
-        counts = _count_by_severity_from_list(apv_obj)  # type: ignore[arg-type]
+        items_m = [x for x in apv_obj if isinstance(x, Mapping)]
+        counts = _count_by_severity_from_list(items_m)
 
     total = sum(counts.values())
 
@@ -98,12 +97,9 @@ def _render_table(summary: Summary, console: Console) -> None:
         )
         return
 
-    if summary.risk_level == "red":
-        title_dot = "🔴"
-    elif summary.risk_level == "yellow":
-        title_dot = "🟡"
-    else:
-        title_dot = "🟢"
+    title_dot = (
+        "🔴" if summary.risk_level == "red" else "🟡" if summary.risk_level == "yellow" else "🟢"
+    )
 
     table = Table(
         title=f"Diff Risk Dashboard {title_dot} — Worst: {summary.worst}",
@@ -147,7 +143,7 @@ def _render_bars(summary: Summary) -> None:
         print(f"{sev:<10} {c:>4} {pct:>3}%  {'█' * int(pct/4)}")
 
 
-def main() -> None:
+def main() -> int:
     desc = "Diff Risk Dashboard (APV JSON -> summary)"
     p = argparse.ArgumentParser(prog="diff_risk_dashboard", description=desc)
     p.add_argument("input", help="File path or inline JSON")
@@ -193,18 +189,18 @@ def main() -> None:
 
     elif args.format == "bar":
         _render_bars(summary)
-
-    else:  # table
+    else:
         console = Console(force_jupyter=False, force_terminal=None, soft_wrap=False)
         _render_table(summary, console)
 
-    if not args.no_exit_by_risk:
-        if summary.risk_level == "red":
-            raise SystemExit(2)
-        if summary.risk_level == "yellow":
-            raise SystemExit(1)
-    raise SystemExit(0)
+    if args.no_exit_by_risk:
+        return 0
+    if summary.risk_level == "red":
+        return 2
+    if summary.risk_level == "yellow":
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
