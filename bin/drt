@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-[ $# -ge 1 ] || { echo "Usage: drt <apv.json|json-string>"; exit 2; }
-script -qfc "poetry run diff-risk \"$1\" -f table --no-exit-by-risk" /dev/null
+if [ $# -lt 1 ]; then echo "Usage: drt <apv.json | raw-json>"; exit 2; fi
+arg="$1"
+if [[ "$arg" == \{* || "$arg" == \[* ]]; then tmp="$(mktemp)"; printf '%s' "$arg" > "$tmp"; trap 'rm -f "$tmp"' EXIT; exec poetry run diff-risk "$tmp" -f table --no-exit-by-risk; fi
+exec poetry run diff-risk "$arg" -f table --no-exit-by-risk
