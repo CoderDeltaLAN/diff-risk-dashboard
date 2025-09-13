@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, TypedDict, cast
 
 Severity = Literal["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
 
@@ -17,7 +17,7 @@ class Finding(TypedDict, total=False):
 
 class Summary(TypedDict):
     total: int
-    by_severity: dict[str, int]  # incluye claves en minúsculas y MAYÚSCULAS
+    by_severity: dict[str, int]  # incluye claves lower y UPPER
     worst: Severity
     risk_level: Literal["red", "yellow", "green"]
 
@@ -47,7 +47,6 @@ def _norm_sev(s: str | None) -> Severity:
 
 
 def _extract_raw_sev(f: Finding) -> str | None:
-    # Soporta tanto "severity" como "predicted_risk" (ai-patch-verifier)
     return f.get("severity") or f.get("predicted_risk")
 
 
@@ -57,12 +56,12 @@ def _iter_findings(obj: Any) -> Iterable[Finding]:
         if isinstance(cand, list):
             for x in cand:
                 if isinstance(x, dict):
-                    yield x  # type: ignore[generator-item-type]
+                    yield cast(Finding, x)
         return
     if isinstance(obj, list):
         for x in obj:
             if isinstance(x, dict):
-                yield x  # type: ignore[generator-item-type]
+                yield cast(Finding, x)
 
 
 def summarize(obj: Any) -> Summary:
@@ -90,7 +89,6 @@ def summarize(obj: Any) -> Summary:
     else:
         risk = "green"
 
-    # Salida: claves minúsculas y MAYÚSCULAS para compatibilidad con tests y clientes
     by_lc = {
         "critical": counts_uc["CRITICAL"],
         "high": counts_uc["HIGH"],
@@ -106,12 +104,11 @@ def summarize(obj: Any) -> Summary:
         "INFO": counts_uc["INFO"],
     }
     by_sev: dict[str, int] = {**by_lc, **by_uc}
-
     return {"total": total, "by_severity": by_sev, "worst": worst, "risk_level": risk}
 
 
 def summarize_apv_json(text_or_path: str | bytes) -> Summary:
-    """Acepta JSON (str/bytes) o una ruta a archivo JSON."""
+    """Acepta JSON (str/bytes) o ruta a archivo JSON."""
     if isinstance(text_or_path, bytes):
         payload = text_or_path.decode("utf-8", errors="strict")
     else:
