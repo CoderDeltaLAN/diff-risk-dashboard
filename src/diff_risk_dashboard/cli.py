@@ -5,14 +5,9 @@ import json
 import pathlib
 import sys
 from collections.abc import Mapping
-from typing import Any, TypedDict, cast
+from typing import Any, cast
 
-from .report import to_json, to_markdown
-
-
-class SeveritySummary(TypedDict):
-    total: int
-    by_severity: Mapping[str, int]
+from .report import SeveritySummary, to_json, to_markdown
 
 
 def _extract_findings(data: object) -> list[Mapping[str, Any]]:
