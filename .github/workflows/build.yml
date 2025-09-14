@@ -61,6 +61,7 @@ jobs:
           poetry run python -m diff_risk_dashboard.cli examples/sample_apv.json -f md -o _intel/report.md
           ls -l _intel/report.md && head -n 5 _intel/report.md
       - name: Upload sample report
+      if: matrix.python-version == '3.12'
         if: always()
         uses: actions/upload-artifact@v4
         with:
