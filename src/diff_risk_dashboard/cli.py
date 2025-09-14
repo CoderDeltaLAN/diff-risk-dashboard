@@ -2,7 +2,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping, TypedDict, cast
 
 from rich.box import ROUNDED
 from rich.console import Console
@@ -32,8 +32,9 @@ def _summarize(apv: dict) -> dict[str, int]:
     return {"total": total, "by_severity": counts, "worst": worst, "risk_level": risk}
 
 
-def _table_plain(summary: dict[str, Any]) -> str:
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
+def _table_plain(summary: Mapping[str, Any]) -> str:
+    by_sev = cast(Mapping[str, int], summary.get("by_severity", {}))
+    counts: dict[str, int] = {s: int(by_sev.get(s, 0)) for s in _SEVERITIES}
     total = int(summary["total"])
     w_sev = max(len("Severity"), max(len(s) for s in _SEVERITIES))
     w_cnt = max(len("Count"), len(str(total)))
@@ -50,8 +51,9 @@ def _table_plain(summary: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _bar_plain(summary: dict[str, Any], width: int = 80) -> str:
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
+def _bar_plain(summary: Mapping[str, Any], width: int = 80) -> str:
+    by_sev = cast(Mapping[str, int], summary.get("by_severity", {}))
+    counts: dict[str, int] = {s: int(by_sev.get(s, 0)) for s in _SEVERITIES}
     total = int(summary["total"])
     maxc = max(counts.values()) if counts else 0
     bar_w = max(10, min(40, width - 24))
@@ -65,8 +67,9 @@ def _bar_plain(summary: dict[str, Any], width: int = 80) -> str:
     return "\n".join(lines)
 
 
-def _table_rich(summary: dict[str, Any], width: int) -> Table:
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
+def _table_rich(summary: Mapping[str, Any], width: int) -> Table:
+    by_sev = cast(Mapping[str, int], summary.get("by_severity", {}))
+    counts: dict[str, int] = {s: int(by_sev.get(s, 0)) for s in _SEVERITIES}
     total = int(summary["total"])
     worst = str(summary.get("worst", "UNKNOWN")).upper()
     risk = str(summary.get("risk", summary.get("risk_level", "green")) or "green").lower()
@@ -87,7 +90,7 @@ def _table_rich(summary: dict[str, Any], width: int) -> Table:
         w = max(1, round(n / maxc * bar_w))
         return "█" * w
 
-    title = Text.assemble(  # type: ignore[arg-type]
+    title = Text.assemble(
         ("Diff Risk Dashboard ", "bold"),
         (emoji + " ",),
         ("— Worst: ", "dim"),
@@ -124,9 +127,10 @@ def _table_rich(summary: dict[str, Any], width: int) -> Table:
     return table
 
 
-def _bar_rich(summary: dict[str, Any], width: int) -> None:
+def _bar_rich(summary: Mapping[str, Any], width: int) -> None:
     console = Console()
-    counts: dict[str, int] = {s: int(summary["by_severity"].get(s, 0)) for s in _SEVERITIES}
+    by_sev = cast(Mapping[str, int], summary.get("by_severity", {}))
+    counts: dict[str, int] = {s: int(by_sev.get(s, 0)) for s in _SEVERITIES}
     total = int(summary["total"])
     maxc = max(counts.values()) if counts else 0
     bar_w = max(10, min(40, width - 24))
