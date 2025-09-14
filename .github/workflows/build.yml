@@ -53,11 +53,13 @@ jobs:
 
       - name: Package & smoke-test CLI
         run: |
+          set -euxo pipefail
           poetry build
           poetry run python -m pip install .
-          mkdir -p _intel
+          poetry run python -c "import sys, diff_risk_dashboard as m; print(sys.version); print(getattr(m, \"__version__\", \"0.0.0\"))"
+          rm -rf _intel && mkdir -p _intel
           poetry run python -m diff_risk_dashboard.cli examples/sample_apv.json -f md -o _intel/report.md
-
+          ls -l _intel/report.md && head -n 5 _intel/report.md
       - name: Upload sample report
         if: always()
         uses: actions/upload-artifact@v4
