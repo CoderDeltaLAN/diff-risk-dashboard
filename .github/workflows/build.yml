@@ -4,9 +4,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
   build:
     name: build (${{ matrix.python-version }})
@@ -14,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.11", "3.12" ]
+        python-version: ["3.11","3.12"]
 
     steps:
       - name: Checkout
@@ -50,18 +52,17 @@ jobs:
 
       - name: Package & smoke-test CLI
         run: |
-          set -euxo pipefail
           poetry build
           poetry run python -m pip install .
-          poetry run python -c "import sys, diff_risk_dashboard as m; print(sys.version); print(getattr(m, \"__version__\", \"0.0.0\"))"
+          poetry run python -c "import sys, diff_risk_dashboard as m; print(sys.version); print(getattr(m, '__version__', '0.0.0'))"
           rm -rf _intel && mkdir -p _intel
           poetry run python -m diff_risk_dashboard.cli examples/sample_apv.json -f md -o _intel/report.md
           ls -l _intel/report.md && head -n 5 _intel/report.md
+
       - name: Upload sample report
-      if: matrix.python-version == '3.12'
-      if: matrix.python-version == '3.12'
-        if: always()
+        if: ${{ matrix.python-version == '3.12' }}
         uses: actions/upload-artifact@v4
         with:
           name: sample-report
           path: _intel/report.md
+          if-no-files-found: error
