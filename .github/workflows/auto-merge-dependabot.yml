@@ -1,23 +1,16 @@
 name: auto-merge-dependabot
 on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review, labeled]
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
 permissions:
   contents: write
   pull-requests: write
 jobs:
   automerge:
-    if: github.actor == 'dependabot[bot]'
+    if: ${{ github.actor == 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch metadata
-        id: meta
-        uses: dependabot/fetch-metadata@v2
+      - uses: ahmadnassri/action-dependabot-auto-merge@v3
         with:
+          target: minor
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Enable auto-merge (squash) for non-major
-        if: steps.meta.outputs.update-type != 'version-update:semver-major'
-        uses: peter-evans/enable-pull-request-automerge@v3
-        with:
-          pull-request-number: ${{ github.event.pull_request.number }}
-          merge-method: squash
