@@ -11,7 +11,7 @@ exclude = ["_intel/**"]
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
 pydantic = "^2"
-rich = "^13"
+rich = ">=13,<15"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8"
