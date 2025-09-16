@@ -16,7 +16,7 @@ rich = "^13"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8"
 ruff = ">=0.6,<0.14"
-black = "^24.8"
+black = ">=24.8,<26.0"
 mypy = "^1.11"
 
 [tool.ruff]
