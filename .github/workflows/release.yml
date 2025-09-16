@@ -1,37 +1,31 @@
 name: release
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag a publicar (e.g. v0.4.31)'
+        description: 'Tag to publish (v*)'
         required: false
-  push:
-    tags:
-      - 'v*'
-
 permissions:
   contents: write
   packages: write
-
-env:
-  TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
 
 jobs:
   build-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - name: Build sdist/wheel
+      - name: Build
         run: |
           python -m pip install -U pip build
           python -m build
       - uses: actions/upload-artifact@v4
         with: { name: dist, path: dist/* }
       - name: Publish to PyPI (guarded)
-        if: ${{ env.TAG != '' && startsWith(env.TAG, 'v') && secrets.PYPI_API_TOKEN != '' }}
+        if: startsWith(github.ref, 'refs/tags/v') && secrets.PYPI_API_TOKEN != ''
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
@@ -40,11 +34,12 @@ jobs:
   publish-ghcr:
     needs: build-publish
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    permissions: { contents: read, packages: write }
     steps:
       - uses: actions/checkout@v4
+      - name: Compute image name (lowercase)
+        shell: bash
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY@L}" >> "$GITHUB_ENV"
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -54,6 +49,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ env.TAG || github.ref_name }}
+          tags: ${{ env.IMAGE }}:latest,${{ env.IMAGE }}:${{ github.ref_name }}
