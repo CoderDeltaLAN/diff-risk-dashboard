@@ -311,3 +311,11 @@ Released under the **MIT License**. See [LICENSE](LICENSE).
 ---
 
 **Download this README**: This same file can be downloaded from the chat link.
+
+---
+
+### Status & Distribution
+[![CI](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/build.yml/badge.svg)](../../actions)
+[![CodeQL](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/codeql.yml/badge.svg)](../../actions)
+[![PyPI](https://img.shields.io/pypi/v/diff-risk-dashboard.svg)](https://pypi.org/project/diff-risk-dashboard/)
+[![GHCR](https://img.shields.io/badge/container-ghcr.io-blue)](../../pkgs/container/diff-risk-dashboard)
