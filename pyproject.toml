@@ -41,3 +41,15 @@ diff-risk-web = "diff_risk_dashboard.web:main"
 [build-system]
 requires = ["poetry-core>=1.8.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.semantic_release]
+branch = "main"
+upload_to_repository = false
+changelog_file = "CHANGELOG.md"
+commit_parser = "angular"
+version_toml = [
+  "pyproject.toml:version",
+  "pyproject.toml:project.version",
+  "pyproject.toml:tool.poetry.version"
+]
+build_command = "python -m pip install -U build && python -m build"
