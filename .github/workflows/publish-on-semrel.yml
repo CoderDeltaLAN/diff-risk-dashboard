@@ -7,57 +7,55 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag a publicar (ej. v0.4.35)"
+        description: Tag to publish (e.g. v0.4.36)
         required: false
         type: string
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   publish:
-    if: >
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'workflow_dispatch')
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
     steps:
-      - name: Checkout (con tags)
+      - name: Checkout with tags
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
-      - name: Resolver TAG
+      - name: Resolve TAG
         id: tag
         shell: bash
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && -n "${{ github.event.inputs.tag }}" ]]; then
-            TAG="${{ github.event.inputs.tag }}"
+          if [[ -n "${{ github.event.inputs.tag }}" ]]; then
+            echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           else
             git fetch --tags --force
-            TAG="$(git tag -l 'v*' --sort=-v:refname | head -n1)"
+            TAG=$(git describe --tags --abbrev=0)
+            echo "TAG=$TAG" >> $GITHUB_ENV
           fi
-          echo "TAG=$TAG" | tee -a "$GITHUB_ENV"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Publicando TAG=$TAG"
+          echo "Resolved TAG=$TAG"
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Build sdist & wheel
+      - name: Sync version from TAG into pyproject.toml
+        shell: bash
+        env:
+          TAG: ${{ env.TAG }}
         run: |
-          python -m pip install -U pip build
-          python -m build
+          VER="${TAG#v}"
+          python - <<'PY'
+import os,re,pathlib
+ver=os.environ["VER"]
+p=pathlib.Path("pyproject.toml")
+t=p.read_text()
+t=re.sub(r'(?m)^(\s*version\s*=\s*")\d+\.\d+\.\d+(")', rf'\1{ver}\2', t)
+p.write_text(t)
+print("synced version:", ver)
+PY
 
-      - name: Publish to PyPI (OIDC)
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist
-          skip-existing: true
-
-      - name: Login GHCR
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -67,10 +65,15 @@ jobs:
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Compute lowercase image name
+        shell: bash
+        run: |
+          OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "IMAGE=ghcr.io/${OWNER}/diff-risk-dashboard" >> $GITHUB_ENV
+
       - name: Build & Push image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ env.TAG }}
-          platforms: linux/amd64
+          tags: ${{ env.IMAGE }}:${{ env.TAG }}
