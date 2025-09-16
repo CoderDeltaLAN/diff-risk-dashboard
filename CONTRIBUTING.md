@@ -1,4 +1,4 @@
 # Contributing
-- Mantén licencia **MIT** y el archivo `NOTICE`.
-- Atribución requerida en forks y publicaciones.
-- Commits con Conventional Commits. PRs requieren CI verde.
+- Keep the **MIT** license and the `NOTICE` file.
+- Attribution is required in forks and publications.
+- Use **Conventional Commits**. PRs must have green CI.
