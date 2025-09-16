@@ -1,4 +1,7 @@
 # Security Policy
-- Reporta vulnerabilidades por **GitHub → Security → Private reporting**.
-- No abras issues públicos con PoCs explotables.
-- SLA objetivo de primera respuesta: 72h.
+
+- Report vulnerabilities via **GitHub → Security → Private reporting**.
+
+- Do not open public issues with exploitable PoCs.
+
+- Target SLA for initial response: 72 hour
