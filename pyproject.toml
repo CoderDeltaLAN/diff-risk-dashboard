@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "diff-risk-dashboard"
-version = "0.4.31"
+version = "0.4.32"
 description = "Visual risk exposure of PRs powered by ai-patch-verifier outputs."
 authors = ["CoderDeltaLAN <coderdeltalan.cargo784@8alias.com>"]
 license = "MIT"
