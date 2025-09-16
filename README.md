@@ -1,7 +1,6 @@
 # ⭐ diff-risk-dashboard — APV → Risk Summary (Python CLI)
 
-A lean, production-grade **Python CLI** that ingests **ai-patch-verifier (APV)** JSON and outputs a clear **risk summary** (table / JSON / Markdown).  
-Designed for **always-green CI**, with strict checks and exit codes per risk level to gate merges professionally.
+A lean, production-grade **Python CLI** that ingests **ai-patch-verifier (APV)** JSON and outputs a clear **risk summary** in **JSON** or **Markdown**.
 
 <div align="center">
 
@@ -12,9 +11,7 @@ Designed for **always-green CI**, with strict checks and exit codes per risk lev
 [![CI / build](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/build.yml)
 [![CodeQL Analysis](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/codeql.yml)
 [![Release](https://img.shields.io/github/v/release/CoderDeltaLAN/diff-risk-dashboard?display_name=tag)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/releases)
-![Python 3.11|3.12](https://img.shields.io/badge/Python-3.11%20|%203.12-3776AB?logo=python)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Donate](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=YVENCBNCZWVPW)
 
 </div>
 
@@ -36,60 +33,23 @@ Designed for **always-green CI**, with strict checks and exit codes per risk lev
 
 ---
 
-## 🚀 Quick Start (end users)
-
-<!-- diff-risk:usage:start -->
-
-## 🚀 Usage
-
-### Short commands
-- `drt <apv.json | raw-json>` – color table (TTY)
-- `drb <apv.json | raw-json>` – text bars (logs)
-- `drj <apv.json | raw-json>` – JSON (CI)
-- `drmd <apv.json | raw-json>` – Markdown (stdout)
+## 🚀 Quick Start
 
 ```bash
-# Demo (bundled sample)
-drt examples/sample_apv.json
-
-# Inline JSON (single quotes outside, double inside)
-drt '{"by_severity":{"CRITICAL":0,"HIGH":1,"MEDIUM":1,"LOW":1,"INFO":0}}'
-
-# Your real file
-APV="/absolute/path/to/your_apv.json"; drt "$APV"
-
-# Other formats with the same input
-drb "$APV"              # bars (logs)
-drj "$APV"              # JSON (CI)
-drmd "$APV" > report.md # Markdown to file
-
-# Force colors for recordings
-script -qfc "drt $APV" /dev/null
-```
-
-> Exit codes: wrappers return `0` thanks to `--no-exit-by-risk`.  
-> CLI raw (without wrappers) sets exit code by risk unless you add `--no-exit-by-risk`.
-
-<!-- diff-risk:usage:end -->
-
-
-
-
-> Sin cambios en tu sistema ni shell. Usa el proyecto como **app Python** con su comando **`diff-risk`** tras instalarlo.
-
-```bash
-# 1) Clonar
+# 1) Clone
 git clone https://github.com/CoderDeltaLAN/diff-risk-dashboard.git
 cd diff-risk-dashboard
 
-# 2) Instalar como paquete (aislado con pipx, o pip estándar)
-# Opción A (recomendada): pipx
-pipx install .
-# Opción B: pip usuario
-python -m pip install --user .
+# 2) Install (isolated venv recommended)
+python -m venv .venv && source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install .
 
-# 3) Usar el comando instalado
-diff-risk examples/sample_apv.json --format md --output report.md
+# 3) Use the CLI
+# Table-like Markdown to file
+diff-risk examples/sample_apv.json -f md -o report.md
+# JSON to stdout
+diff-risk examples/sample_apv.json -f json
 ```
 
 ### CLI usage
@@ -99,73 +59,35 @@ diff-risk -h
 ```
 
 ```
-usage: diff_risk_dashboard [-h] [-f {table,json,md}] [-o OUTPUT]
-                           [--no-exit-by-risk]
-                           input
+usage: diff-risk [-h] [-f {md,json}] [-o OUTPUT] input
 
 Diff Risk Dashboard (APV JSON -> summary)
 
 positional arguments:
-  input                 Path o texto JSON de ai-patch-verifier
+  input                 Path to ai-patch-verifier JSON
 
 options:
   -h, --help            show this help message and exit
-  -f {table,json,md}, --format {table,json,md}
-                        Formato de salida
+  -f {md,json}, --format {md,json}
+                        Output format
   -o OUTPUT, --output OUTPUT
-                        Archivo de salida; '-' = stdout
-  --no-exit-by-risk     No ajustar el exit code por nivel de riesgo
+                        Output file; '-' = stdout
 ```
 
-#### Examples
-
-Table (por defecto, al stdout):
-
-```bash
-diff-risk examples/sample_apv.json
-```
-
-JSON (ideal para piping/automatización):
-
-```bash
-diff-risk examples/sample_apv.json -f json
-```
-
-Markdown a archivo (para adjuntar en PRs/Wikis):
-
-```bash
-diff-risk examples/sample_apv.json -f md -o report.md
-```
-
-Salida Markdown de ejemplo:
-
-```md
-# Diff Risk Dashboard 🔴 — Worst: **HIGH**
-
-| Severity | Count |
-|---|---:|
-| CRITICAL | 0 |
-| HIGH | 1 |
-| MEDIUM | 1 |
-| LOW | 1 |
-| INFO | 0 |
-| **TOTAL** | **3** |
-
-> Generated by diff-risk-dashboard CLI
-```
+> **Note:** Inline JSON strings and wrapper commands (`drt`, `drb`, `drj`, `drmd`) are not supported in this version. Provide a file path as `input`.
 
 ---
 
-## 📦 What the tool expects (APV JSON)
+## 📦 Expected input (APV-like JSON)
 
-- Entrada: JSON con findings tipo APV, ej. objetos que incluyen `predicted_risk` (`low|medium|high`).
-- El sumario **normaliza mayúsculas/minúsculas** y calcula:
+- Input: JSON with APV-style findings (e.g., objects including a `predicted_risk` of `low|medium|high`).  
+- The summarizer normalizes case and computes:
   - `total`
-  - `by_severity` (claves `CRITICAL|HIGH|MEDIUM|LOW|INFO` y también minúsculas)
+  - `by_severity` (`CRITICAL|HIGH|MEDIUM|LOW|INFO` plus lowercase aliases)
   - `worst`
   - `risk_level` (`red|yellow|green`)
 
-Ejemplo de salida `-f json`:
+Example output (`-f json`):
 
 ```json
 {
@@ -189,32 +111,17 @@ Ejemplo de salida `-f json`:
 
 ---
 
-## ⛳ Exit codes (CI gating)
-
-- `green` → **0**
-- `yellow` → **1**
-- `red` → **2**
-
-Por defecto, el proceso **sale** con el código según `risk_level`.  
-Para desactivar este comportamiento (p.ej., en local o cuando solo generas reportes):
+## 🧪 Local Developer Workflow
 
 ```bash
-diff-risk examples/sample_apv.json --no-exit-by-risk
-```
-
----
-
-## 🧪 Local Developer Workflow (mirrors CI)
-
-```bash
-# Requisitos de desarrollo
+# Dev requirements
 python -m pip install --upgrade pip
 pip install poetry
 
-# Instalar deps
+# Install deps
 poetry install --no-interaction
 
-# Gates locales
+# Local gates
 poetry run ruff check .
 poetry run black --check .
 PYTHONPATH=src poetry run pytest -q
@@ -225,12 +132,11 @@ poetry run mypy src
 
 ## 🔧 CI (GitHub Actions)
 
-- Matriz **Python 3.11 / 3.12** alineada con los gates locales.
-- **CodeQL** en PRs y `main`.
-- **Release Drafter** para changelog/release notes.
-- **Branch protection** y merges seguros (historial lineal via squash).
+- Matrix **Python 3.11 / 3.12** aligned with local gates.
+- **CodeQL** and **Release Drafter** active.
+- Protected `main` with required checks and squash merges.
 
-Fragmento típico del job Python:
+Typical job steps:
 
 ```yaml
 - run: python -m pip install --upgrade pip
@@ -242,58 +148,27 @@ Fragmento típico del job Python:
     PYTHONPATH: src
   run: poetry run pytest -q
 - run: poetry run mypy src
-# Ejemplo de uso del CLI en CI:
+
+# Example CLI use in CI
 - run: poetry run python -m pip install .
 - run: diff-risk examples/sample_apv.json -f md -o report.md
 ```
 
 ---
 
-## 🗺 When to Use This Project
-
-- Necesitas **resumen de riesgo** claro y portable a partir de **APV**.
-- Quieres **bloquear merges** cuando el riesgo supera el umbral (exit codes).
-- Buscas **reportes en Markdown/JSON** para PRs, auditorías y tableros.
-
----
-
-## 🧩 Customization
-
-- Genera tus propios APV JSON y pásalos como `input`.
-- Cambia el formato con `--format` (**table/json/md**) y redirige a archivo con `--output`.
-- Integra el JSON de salida con otras herramientas o dashboards.
-
----
-
 ## 🔒 Security
 
-- Sin cambios en tu shell o sistema: **no** requiere editar `.zshrc` ni configuración del usuario.
-- CodeQL activo; se recomienda usar repos **privados** para datos sensibles.
-- No subas JSON con información confidencial a PRs públicos.
+- No shell customization required.
+- Keep sensitive data out of public PRs.
+- CodeQL is enabled.
 
 ---
 
 ## 🙌 Contributing
 
-- PRs pequeños y atómicos, estilo **Conventional Commits**.
-- Mantén los **gates** verdes antes de solicitar revisión.
-- Activa **auto-merge** cuando pasen los checks.
-
----
-
-## 💚 Donations & Sponsorship
-
-If this project saves you time, consider supporting ongoing maintenance. Thank you!  
-[![Donate](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=YVENCBNCZWVPW)
-
----
-
-## 🔎 SEO Keywords
-
-apv risk summary cli, ai patch verifier json, diff risk dashboard python,  
-markdown security report, always green ci python, ruff black pytest mypy,  
-github actions codeql release drafter, branch protection required checks,  
-console scripts professional cli ux
+- Small, atomic PRs using **Conventional Commits**.
+- Keep gates green before requesting review.
+- Use auto-merge when checks pass.
 
 ---
 
@@ -304,18 +179,13 @@ GitHub: https://github.com/CoderDeltaLAN
 
 ---
 
+## 💚 Donations & Sponsorship
+
+Support open-source: your donations keep projects clean, secure, and evolving for the global community.
+[![Donate](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=YVENCBNCZWVPW)
+
+---
+
 ## 📄 License
 
 Released under the **MIT License**. See [LICENSE](LICENSE).
-
----
-
-**Download this README**: This same file can be downloaded from the chat link.
-
----
-
-### Status & Distribution
-[![CI](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/build.yml/badge.svg)](../../actions)
-[![CodeQL](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/codeql.yml/badge.svg)](../../actions)
-[![PyPI](https://img.shields.io/pypi/v/diff-risk-dashboard.svg)](https://pypi.org/project/diff-risk-dashboard/)
-[![GHCR](https://img.shields.io/badge/container-ghcr.io-blue)](../../pkgs/container/diff-risk-dashboard)
