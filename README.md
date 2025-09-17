@@ -1,9 +1,7 @@
 # ⭐ diff-risk-dashboard — APV → Risk Summary (Python CLI)
-[![Donate - PayPal](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=YVENCBNCZWVPW)
-[![Repo views](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FCoderDeltaLAN%2Fdiff-risk-dashboard&count_bg=%230070BA&title_bg=%23000000&icon=github.svg&icon_color=%23FFFFFF&title=views&edge_flat=true)](https://hits.seeyoufarm.com)
 
-
-A lean, production-grade **Python CLI** that ingests **ai-patch-verifier (APV)** JSON and outputs a clear **risk summary** in **JSON** or **Markdown**.
+A lean, production-grade **Python CLI** that ingests **ai-patch-verifier (APV)** JSON and outputs a clear **risk summary** as **Markdown** or **JSON**.
+Designed for clean CI; use the JSON output to enforce your own merge gates in workflows.
 
 <div align="center">
 
@@ -15,6 +13,9 @@ A lean, production-grade **Python CLI** that ingests **ai-patch-verifier (APV)**
 [![CodeQL Analysis](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/actions/workflows/codeql.yml)
 [![Release](https://img.shields.io/github/v/release/CoderDeltaLAN/diff-risk-dashboard?display_name=tag)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![GHCR](https://img.shields.io/badge/container-ghcr.io-blue)](../../pkgs/container/diff-risk-dashboard)
+[![Repo views](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FCoderDeltaLAN%2Fdiff-risk-dashboard&count_bg=%230070BA&title_bg=%23000000&icon=github.svg&icon_color=%23FFFFFF&title=views&edge_flat=true)](https://hits.seeyoufarm.com)
+[![Donate - PayPal](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=YVENCBNCZWVPW)
 
 </div>
 
@@ -36,99 +37,89 @@ A lean, production-grade **Python CLI** that ingests **ai-patch-verifier (APV)**
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (end users)
+
+<!-- diff-risk:usage:start -->
+
+### Usage (file path input)
+
+> Input **must be a file path** to an APV JSON. Inline JSON is not supported.
+
+```bash
+# JSON output to file
+diff-risk examples/sample_apv.json -f json -o out.json
+
+# Markdown output to file
+diff-risk examples/sample_apv.json -f md -o report.md
+
+# Send to stdout
+diff-risk examples/sample_apv.json -f json -o -
+diff-risk examples/sample_apv.json -f md   -o -
+```
+
+<!-- diff-risk:usage:end -->
+
+### Install & run locally
 
 ```bash
 # 1) Clone
 git clone https://github.com/CoderDeltaLAN/diff-risk-dashboard.git
 cd diff-risk-dashboard
 
-# 2) Install (isolated venv recommended)
-python -m venv .venv && source .venv/bin/activate
-python -m pip install -U pip
+# 2) Install as package
+python -m pip install --upgrade pip
 python -m pip install .
 
 # 3) Use the CLI
-# Table-like Markdown to file
 diff-risk examples/sample_apv.json -f md -o report.md
-# JSON to stdout
-diff-risk examples/sample_apv.json -f json
 ```
 
 ### CLI usage
 
-```bash
-diff-risk -h
-```
-
-```
+```text
 usage: diff-risk [-h] [-f {md,json}] [-o OUTPUT] input
 
-Diff Risk Dashboard (APV JSON -> summary)
-
 positional arguments:
-  input                 Path to ai-patch-verifier JSON
+  input                 Path to ai-patch-verifier JSON file
 
 options:
-  -h, --help            show this help message and exit
+  -h, --help            Show help and exit
   -f {md,json}, --format {md,json}
                         Output format
   -o OUTPUT, --output OUTPUT
                         Output file; '-' = stdout
 ```
 
-> **Note:** Inline JSON strings and wrapper commands (`drt`, `drb`, `drj`, `drmd`) are not supported in this version. Provide a file path as `input`.
-
----
-
-## 📦 Expected input (APV-like JSON)
-
-- Input: JSON with APV-style findings (e.g., objects including a `predicted_risk` of `low|medium|high`).  
-- The summarizer normalizes case and computes:
-  - `total`
-  - `by_severity` (`CRITICAL|HIGH|MEDIUM|LOW|INFO` plus lowercase aliases)
-  - `worst`
-  - `risk_level` (`red|yellow|green`)
-
-Example output (`-f json`):
+#### Example JSON output
 
 ```json
 {
   "total": 3,
   "by_severity": {
-    "critical": 0,
     "high": 1,
     "medium": 1,
-    "low": 1,
-    "info": 0,
-    "CRITICAL": 0,
-    "HIGH": 1,
-    "MEDIUM": 1,
-    "LOW": 1,
-    "INFO": 0
-  },
-  "worst": "HIGH",
-  "risk_level": "red"
+    "low": 1
+  }
 }
 ```
 
 ---
 
-## 🧪 Local Developer Workflow
+## 🧪 Local Developer Workflow (mirrors CI)
 
 ```bash
-# Dev requirements
 python -m pip install --upgrade pip
 pip install poetry
 
-# Install deps
+# Dependencies
 poetry install --no-interaction
 
 # Local gates
 poetry run ruff check .
 poetry run black --check .
 PYTHONPATH=src poetry run pytest -q
-poetry run mypy src
+# optional:
+# poetry run mypy src
 ```
 
 ---
@@ -136,10 +127,11 @@ poetry run mypy src
 ## 🔧 CI (GitHub Actions)
 
 - Matrix **Python 3.11 / 3.12** aligned with local gates.
-- **CodeQL** and **Release Drafter** active.
-- Protected `main` with required checks and squash merges.
+- **CodeQL** on PRs and `main`.
+- **Release Drafter** for changelog.
+- Branch protection + linear history via squash.
 
-Typical job steps:
+Typical Python job steps:
 
 ```yaml
 - run: python -m pip install --upgrade pip
@@ -150,28 +142,40 @@ Typical job steps:
 - env:
     PYTHONPATH: src
   run: poetry run pytest -q
-- run: poetry run mypy src
-
-# Example CLI use in CI
+# Example CLI usage in CI:
 - run: poetry run python -m pip install .
 - run: diff-risk examples/sample_apv.json -f md -o report.md
 ```
 
 ---
 
+## 🗺 When to Use This Project
+
+- You need a **clear, portable risk summary** from **APV** JSON.
+- You want **Markdown/JSON** outputs for PRs, audits, or dashboards.
+
+---
+
+## 🧩 Customization
+
+- Produce your own APV JSON and pass the file path as `input`.
+- Choose output format with `--format {md,json}` and write to a file with `--output`.
+
+---
+
 ## 🔒 Security
 
-- No shell customization required.
-- Keep sensitive data out of public PRs.
-- CodeQL is enabled.
+- No shell changes required; pure Python CLI.
+- Keep sensitive APV JSON private (avoid public PRs).
+- CodeQL enabled in CI.
 
 ---
 
 ## 🙌 Contributing
 
 - Small, atomic PRs using **Conventional Commits**.
-- Keep gates green before requesting review.
-- Use auto-merge when checks pass.
+- Keep all gates green before asking for review.
+- Enable auto-merge once checks pass.
 
 ---
 
@@ -192,3 +196,5 @@ Support open-source: your donations keep projects clean, secure, and evolving fo
 ## 📄 License
 
 Released under the **MIT License**. See [LICENSE](LICENSE).
+
+---
