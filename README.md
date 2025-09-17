@@ -14,7 +14,6 @@ Designed for clean CI; use the JSON output to enforce your own merge gates in wo
 [![Release](https://img.shields.io/github/v/release/CoderDeltaLAN/diff-risk-dashboard?display_name=tag)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GHCR](https://img.shields.io/badge/container-ghcr.io-blue)](../../pkgs/container/diff-risk-dashboard)
-[![Repo views](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FCoderDeltaLAN%2Fdiff-risk-dashboard&count_bg=%230070BA&title_bg=%23000000&icon=github.svg&icon_color=%23FFFFFF&title=views&edge_flat=true)](https://hits.seeyoufarm.com)
 [![Donate - PayPal](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=YVENCBNCZWVPW)
 
 </div>
@@ -59,7 +58,7 @@ diff-risk examples/sample_apv.json -f md   -o -
 
 <!-- diff-risk:usage:end -->
 
-### Install & run locally
+### A) Install & run locally
 
 ```bash
 # 1) Clone
@@ -72,6 +71,19 @@ python -m pip install .
 
 # 3) Use the CLI
 diff-risk examples/sample_apv.json -f md -o report.md
+```
+
+### Install & Run
+
+#### B) From PyPI (recomendado)
+
+```bash
+python -m pip install -U pip
+python -m pip install diff-risk-dashboard
+
+# Use the CLI
+diff-risk examples/sample_apv.json -f md   -o report.md
+diff-risk examples/sample_apv.json -f json -o report.json
 ```
 
 ### CLI usage
@@ -198,3 +210,5 @@ Support open-source: your donations keep projects clean, secure, and evolving fo
 Released under the **MIT License**. See [LICENSE](LICENSE).
 
 ---
+
+<!-- sync: 2025-09-17T06:38:28Z -->
