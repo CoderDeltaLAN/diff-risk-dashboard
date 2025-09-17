@@ -1,4 +1,7 @@
 # ⭐ diff-risk-dashboard — APV → Risk Summary (Python CLI)
+[![Donate - PayPal](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=YVENCBNCZWVPW)
+[![Repo views](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FCoderDeltaLAN%2Fdiff-risk-dashboard&count_bg=%230070BA&title_bg=%23000000&icon=github.svg&icon_color=%23FFFFFF&title=views&edge_flat=true)](https://hits.seeyoufarm.com)
+
 
 A lean, production-grade **Python CLI** that ingests **ai-patch-verifier (APV)** JSON and outputs a clear **risk summary** in **JSON** or **Markdown**.
 
