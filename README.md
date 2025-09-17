@@ -13,6 +13,7 @@ A lean, production-grade **Python CLI** that ingests **ai-patch-verifier (APV)**
 [![Release](https://img.shields.io/github/v/release/CoderDeltaLAN/diff-risk-dashboard?display_name=tag)](https://github.com/CoderDeltaLAN/diff-risk-dashboard/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+[![Sponsor](https://img.shields.io/github/sponsors/CoderDeltaLAN?style=for-the-badge&label=Sponsor)](https://github.com/sponsors/CoderDeltaLAN)
 </div>
 
 ---
